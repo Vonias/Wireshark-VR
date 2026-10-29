@@ -5,8 +5,10 @@ using System.Text;
 namespace WiresharkVR.Core;
 
 /// <summary>Runs tshark (Wireshark's command-line engine) and returns dissected packets.</summary>
-public sealed class TsharkRunner
+public sealed class TsharkRunner : ICaptureEngine
 {
+    public string Name => "tshark (full Wireshark engine)";
+
     public string ExecutablePath { get; }
 
     public TsharkRunner(string? executablePath = null)

@@ -10,6 +10,11 @@
 		<ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
 		<RootNamespace>WiresharkVR.App</RootNamespace>
 		<ReadOnlyProject>true</ReadOnlyProject>
+		<Nullable>enable</Nullable>
+
+		<!--A standalone headset app must carry its own code. Without this, Debug builds leave the assemblies
+		    out of the APK and expect Visual Studio to push them, which only works while tethered.-->
+		<EmbedAssembliesIntoApk>true</EmbedAssembliesIntoApk>
 
 		<SKOpenXRLoader>Standard</SKOpenXRLoader>
 		<SKAssetFolder>..\..\Assets</SKAssetFolder>
@@ -22,6 +27,7 @@
 
 	<ItemGroup>
 		<PackageReference Include="StereoKit" Version="0.3.11" />
+		<ProjectReference Include="..\..\..\WiresharkVR.Core\WiresharkVR.Core.csproj" />
 	</ItemGroup>
 
 	<!--Point Android to the right folders, otherwise these default to the root
@@ -31,6 +37,11 @@
 		<MonoAndroidResourcePrefix>..\..\Platforms\Android\Resources</MonoAndroidResourcePrefix>
 		<MonoAndroidAssetsPrefix  >..\..\Platforms\Android\Assets</MonoAndroidAssetsPrefix>
 	</PropertyGroup>
+
+	<!--Ship the sample capture inside the APK; PlatformPaths.Android.cs copies it out on first run.-->
+	<ItemGroup>
+		<AndroidAsset Include="..\..\..\samples\loopback-http.pcapng" Link="loopback-http.pcapng" />
+	</ItemGroup>
 
 	<ItemGroup>
 		<Compile Include="..\..\**\*.cs" Exclude="..\..\obj\**;..\..\bin\**;..\..\Projects\**" />

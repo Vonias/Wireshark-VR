@@ -22,7 +22,7 @@ class WiresharkApp
 	static readonly string[] FilterShortcuts =
 		{ "tcp", "udp", "http", "dns", "icmp", "arp", "tcp.flags.syn == 1", "!(arp)" };
 
-	readonly TsharkRunner _tshark;
+	readonly ICaptureEngine _engine;
 
 	// ---- capture state ----
 	string?          _path;
@@ -64,6 +64,7 @@ class WiresharkApp
 	bool   _showList = true, _showDetails = true, _showBytes = true;
 	bool   _showFlow;
 	TextStyle? _mono;
+	readonly StressBall _ball = new StressBall();
 
 	// ---- window poses: main on top, list in the middle, details and bytes below ----
 	// A window's pose is its top edge. Details and bytes sit beside the list, angled in toward the user.
@@ -79,16 +80,20 @@ class WiresharkApp
 	PacketScene?              _flowScene;
 	string?                   _flowSceneKey;
 
-	public WiresharkApp(string? initialPath, string? startupError)
+	/// <param name="forceNative">Use the built-in dissector even when tshark is installed.</param>
+	public WiresharkApp(string? initialPath, string? startupError, bool forceNative = false)
 	{
-		_tshark = new TsharkRunner();
+		_engine = CaptureEngine.Create(forceNative);
 		if (startupError != null) SetMessage(startupError, true);
 		else if (initialPath != null) LoadFile(initialPath);
 
 		// Hex needs a fixed-width font to line up. Fall back to the default font where none is available.
-		string consolas = @"C:\Windows\Fonts\consola.ttf";
-		if (File.Exists(consolas))
-			_mono = Text.MakeStyle(Font.FromFile(consolas), 0.012f, Color.White);
+		foreach (var fontPath in PlatformPaths.MonospaceFonts())
+		{
+			if (!File.Exists(fontPath)) continue;
+			try { _mono = Text.MakeStyle(Font.FromFile(fontPath), 0.012f, Color.White); break; }
+			catch (Exception) { /* keep the default font */ }
+		}
 	}
 
 	// =====================================================================
@@ -106,6 +111,7 @@ class WiresharkApp
 		if (_showBytes)   BytesWindow();
 		if (_outputOpen)  OutputWindow();
 		if (_showFlow)    FlowStep();
+		_ball.Step();
 	}
 
 	void HandleKeys()
@@ -142,7 +148,7 @@ class WiresharkApp
 		if (_path == null) return;
 		string path = _path;
 		_listTaskFilter = filter;
-		_listTask = Task.Run(() => _tshark.ListPacketsAsync(path, filter));
+		_listTask = Task.Run(() => _engine.ListPacketsAsync(path, filter));
 	}
 
 	void PollWork()
@@ -211,7 +217,7 @@ class WiresharkApp
 		{
 			string path = _path;
 			_detailTaskNumber = number;
-			_detailTask = Task.Run(() => _tshark.GetDetailAsync(path, number));
+			_detailTask = Task.Run(() => _engine.GetDetailAsync(path, number));
 		}
 	}
 
@@ -290,6 +296,7 @@ class WiresharkApp
 		string file = _path == null ? "no file" : Path.GetFileName(_path);
 		UI.Label($"File: {file}    Packets: {_totalPackets}    Displayed: {_rows.Count}    Selected: " +
 		         (CurrentNumber > 0 ? "#" + CurrentNumber : "none"));
+		UI.Label($"Engine: {_engine.Name}");
 		UI.WindowEnd();
 	}
 
@@ -298,11 +305,21 @@ class WiresharkApp
 		switch (_menu)
 		{
 			case "File":
-				if (UI.Button("Open sample")) { var s = FindSample(); if (s != null) LoadFile(s); }
-				UI.SameLine();
-				if (UI.Button("Open file...")) Platform.FilePicker(PickerMode.Open, f => _pendingOpen = f, () => { }, ".pcap", ".pcapng", ".cap");
+				if (UI.Button("Open sample")) { var s = PlatformPaths.SampleCapture(); if (s != null) LoadFile(s); }
+				if (PlatformPaths.SupportsFilePicker())
+				{
+					UI.SameLine();
+					if (UI.Button("Browse...")) Platform.FilePicker(PickerMode.Open, f => _pendingOpen = f, () => { }, ".pcap", ".pcapng", ".cap");
+				}
 				UI.SameLine();
 				if (UI.Button("Quit")) SK.Quit();
+
+				// Captures in the app's capture folder (on the headset, fill it with "adb push").
+				string? dir = PlatformPaths.CaptureDirectory();
+				var files = dir == null ? Array.Empty<string>() : CaptureFiles(dir);
+				UI.Label(files.Length == 0 ? "No captures in the capture folder yet." : "Captures in " + dir);
+				foreach (var f in files)
+					if (UI.Button(Path.GetFileName(f))) LoadFile(f);
 				break;
 
 			case "Capture":
@@ -318,14 +335,14 @@ class WiresharkApp
 				break;
 
 			case "Statistics":
-				if (UI.Button("Protocol hierarchy")) RunOutput("Protocol Hierarchy", p => _tshark.StatisticAsync(p, "io,phs", _appliedFilter));
+				if (UI.Button("Protocol hierarchy")) RunOutput("Protocol Hierarchy", p => _engine.StatisticAsync(p, "io,phs", _appliedFilter));
 				UI.SameLine();
-				if (UI.Button("TCP conversations")) RunOutput("TCP Conversations", p => _tshark.StatisticAsync(p, "conv,tcp", _appliedFilter));
+				if (UI.Button("TCP conversations")) RunOutput("TCP Conversations", p => _engine.StatisticAsync(p, "conv,tcp", _appliedFilter));
 				UI.SameLine();
-				if (UI.Button("UDP conversations")) RunOutput("UDP Conversations", p => _tshark.StatisticAsync(p, "conv,udp", _appliedFilter));
-				if (UI.Button("IP conversations")) RunOutput("IP Conversations", p => _tshark.StatisticAsync(p, "conv,ip", _appliedFilter));
+				if (UI.Button("UDP conversations")) RunOutput("UDP Conversations", p => _engine.StatisticAsync(p, "conv,udp", _appliedFilter));
+				if (UI.Button("IP conversations")) RunOutput("IP Conversations", p => _engine.StatisticAsync(p, "conv,ip", _appliedFilter));
 				UI.SameLine();
-				if (UI.Button("IP endpoints")) RunOutput("IP Endpoints", p => _tshark.StatisticAsync(p, "endpoints,ip", _appliedFilter));
+				if (UI.Button("IP endpoints")) RunOutput("IP Endpoints", p => _engine.StatisticAsync(p, "endpoints,ip", _appliedFilter));
 				break;
 
 			case "View":
@@ -383,7 +400,7 @@ class WiresharkApp
 		var s = SelectedStream();
 		if (s == null) { SetMessage("Select a TCP/UDP packet first.", true); return; }
 		var (proto, index) = s.Value;
-		RunOutput($"Follow {proto.ToUpper()} Stream {index}", p => _tshark.FollowStreamAsync(p, proto, index));
+		RunOutput($"Follow {proto.ToUpper()} Stream {index}", p => _engine.FollowStreamAsync(p, proto, index));
 	}
 
 	// =====================================================================
@@ -591,7 +608,7 @@ class WiresharkApp
 		if (_flowConversations == null && _flowTask == null)
 		{
 			string path = _path;
-			_flowTask = Task.Run(async () => ConversationBuilder.Build(await _tshark.ReadFileAsync(path, 5000)));
+			_flowTask = Task.Run(async () => ConversationBuilder.Build(await _engine.ReadFileAsync(path, 5000)));
 		}
 		if (_flowTask is { IsCompleted: true } t)
 		{
@@ -617,15 +634,19 @@ class WiresharkApp
 
 	static string Clip(string s, int max) => s.Length <= max ? s : s.Substring(0, max - 3) + "...";
 
-	public static string? FindSample()
+	/// <summary>Capture files in a folder, newest first, capped so the menu stays usable.</summary>
+	static string[] CaptureFiles(string dir)
 	{
-		var dir = new DirectoryInfo(AppContext.BaseDirectory);
-		while (dir != null)
+		try
 		{
-			string candidate = Path.Combine(dir.FullName, "samples", "loopback-http.pcapng");
-			if (File.Exists(candidate)) return candidate;
-			dir = dir.Parent;
+			return Directory.EnumerateFiles(dir)
+				.Where(f => f.EndsWith(".pcap", StringComparison.OrdinalIgnoreCase)
+				         || f.EndsWith(".pcapng", StringComparison.OrdinalIgnoreCase)
+				         || f.EndsWith(".cap", StringComparison.OrdinalIgnoreCase))
+				.OrderByDescending(File.GetLastWriteTimeUtc)
+				.Take(8)
+				.ToArray();
 		}
-		return null;
+		catch (Exception) { return Array.Empty<string>(); }
 	}
 }
