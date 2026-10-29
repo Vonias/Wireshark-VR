@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="WiresharkVR.App/WiresharkVR.App.csproj" />
+  <Project Path="WiresharkVR.Core.Tests/WiresharkVR.Core.Tests.csproj" />
+  <Project Path="WiresharkVR.Core/WiresharkVR.Core.csproj" />
+</Solution>

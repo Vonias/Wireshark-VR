@@ -1,0 +1,16 @@
+# Upstream Wireshark source and its download. Not ours, and very large.
+wireshark-master/
+wireshark-master.zip
+
+# Build output
+bin/
+obj/
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+
+# Captures you record yourself may contain private traffic. Only the bundled sample is tracked.
+samples/*
+!samples/loopback-http.pcapng
