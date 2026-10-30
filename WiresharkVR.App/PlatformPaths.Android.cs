@@ -39,4 +39,10 @@ static partial class PlatformPaths
 	public static partial bool SupportsFilePicker() => false;
 
 	public static partial string[] MonospaceFonts() => new[] { "/system/fonts/DroidSansMono.ttf", "/system/fonts/CutiveMono.ttf" };
+
+	public static partial bool SupportsVpnCapture() => true;
+	public static partial void RequestVpnCapture() => MainActivity.RequestVpnFromAnyThread();
+	public static partial void StopVpnCapture() => VpnCaptureService.StopCapture();
+	public static partial WiresharkVR.Core.Vpn.LiveCapture? ActiveVpnCapture() => VpnCaptureService.Active;
+	public static partial bool TakeVpnDenied() => MainActivity.TakeVpnDenied();
 }

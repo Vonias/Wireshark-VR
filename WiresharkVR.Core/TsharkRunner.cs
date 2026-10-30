@@ -1,6 +1,8 @@
 using System.Diagnostics;
 using System.Globalization;
+using System.Runtime.CompilerServices;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace WiresharkVR.Core;
 
@@ -95,6 +97,75 @@ public sealed class TsharkRunner : ICaptureEngine
         var args = new List<string> { "-r", pcapPath, "-T", "json" };
         if (maxPackets > 0) { args.Add("-c"); args.Add(maxPackets.ToString()); }
         return CaptureParser.Parse(await RunAsync(args, ct));
+    }
+
+    // ---- Live capture -------------------------------------------------------
+
+    /// <summary>Returns interface labels like "1. Wi-Fi" parsed from tshark -D output.</summary>
+    public async Task<List<string>> ListInterfacesAsync(CancellationToken ct = default)
+    {
+        var text = await RunAsync(new[] { "-D" }, ct);
+        var result = new List<string>();
+        foreach (var raw in text.Split('\n'))
+        {
+            var line = raw.TrimEnd('\r').Trim();
+            if (line.Length == 0) continue;
+            // "1. \Device\NPF_{GUID} (Wi-Fi)"  →  "1. Wi-Fi"
+            var m = Regex.Match(line, @"^(\d+)\.\s+.*\((.+)\)\s*$");
+            result.Add(m.Success ? $"{m.Groups[1].Value}. {m.Groups[2].Value}" : line);
+        }
+        return result;
+    }
+
+    /// <summary>
+    /// Streams a live capture from <paramref name="iface"/> (the number string from <see cref="ListInterfacesAsync"/>).
+    /// Writes raw packets to <paramref name="tempFile"/> simultaneously so details can be fetched while running.
+    /// </summary>
+    public async IAsyncEnumerable<PacketRow> CaptureAsync(
+        string iface, string tempFile, [EnumeratorCancellation] CancellationToken ct = default)
+    {
+        var psi = new ProcessStartInfo(ExecutablePath)
+        {
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            StandardOutputEncoding = Encoding.UTF8,
+            UseShellExecute = false,
+            CreateNoWindow = true,
+        };
+        psi.ArgumentList.Add("-i");  psi.ArgumentList.Add(iface);
+        psi.ArgumentList.Add("-w");  psi.ArgumentList.Add(tempFile);  // write pcapng for details/hex
+        psi.ArgumentList.Add("-l");  // line-buffered stdout
+        psi.ArgumentList.Add("-T");  psi.ArgumentList.Add("fields");
+        psi.ArgumentList.Add("-E");  psi.ArgumentList.Add("separator=/t");
+        psi.ArgumentList.Add("-e");  psi.ArgumentList.Add("frame.number");
+        psi.ArgumentList.Add("-e");  psi.ArgumentList.Add("frame.time_relative");
+        psi.ArgumentList.Add("-e");  psi.ArgumentList.Add("_ws.col.Source");
+        psi.ArgumentList.Add("-e");  psi.ArgumentList.Add("_ws.col.Destination");
+        psi.ArgumentList.Add("-e");  psi.ArgumentList.Add("_ws.col.Protocol");
+        psi.ArgumentList.Add("-e");  psi.ArgumentList.Add("frame.len");
+        psi.ArgumentList.Add("-e");  psi.ArgumentList.Add("_ws.col.Info");
+
+        using var proc = Process.Start(psi) ?? throw new InvalidOperationException("Could not start tshark.");
+        try
+        {
+            string? line;
+            while ((line = await proc.StandardOutput.ReadLineAsync(ct).ConfigureAwait(false)) != null)
+            {
+                var f = line.TrimEnd('\r').Split('\t');
+                if (f.Length < 7 || !int.TryParse(f[0], out var number)) continue;
+                double.TryParse(f[1], NumberStyles.Float, CultureInfo.InvariantCulture, out var rel);
+                int.TryParse(f[5], out var len);
+                yield return new PacketRow(number, rel, f[2], f[3], f[4], len, f[6]);
+            }
+        }
+        finally
+        {
+            if (!proc.HasExited)
+            {
+                proc.Kill();
+                await proc.WaitForExitAsync(CancellationToken.None).ConfigureAwait(false);
+            }
+        }
     }
 
     // ---- process plumbing -------------------------------------------------

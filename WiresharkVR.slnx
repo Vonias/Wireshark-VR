@@ -1,8 +1,9 @@
 <Solution>
-  <Folder Name="/WiresharkVR.App/" />
-  <Folder Name="/WiresharkVR.App/Projects/" />
-  <Folder Name="/WiresharkVR.App/Projects/Android/">
-    <Project Path="WiresharkVR.App/Projects/Android/WiresharkVR.App.Android.csproj" />
+  <Folder Name="/Projects/" />
+  <Folder Name="/Projects/Android/">
+    <Project Path="WiresharkVR.App/Projects/Android/WiresharkVR.App.Android.csproj">
+      <Deploy />
+    </Project>
   </Folder>
   <Project Path="WiresharkVR.App/WiresharkVR.App.csproj" />
   <Project Path="WiresharkVR.Core.Tests/WiresharkVR.Core.Tests.csproj" />

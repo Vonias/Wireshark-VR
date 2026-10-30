@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Runtime.CompilerServices;
 using System.Text;
 
 namespace WiresharkVR.Core.Native;
@@ -48,6 +49,16 @@ public sealed class NativeEngine : ICaptureEngine
 
     public Task<string> FollowStreamAsync(string pcapPath, string protocol, int streamIndex, CancellationToken ct = default) =>
         Task.Run(() => Follow(Load(pcapPath), protocol, streamIndex), ct);
+
+    public Task<List<string>> ListInterfacesAsync(CancellationToken ct = default) =>
+        Task.FromResult(new List<string>());
+
+    public async IAsyncEnumerable<PacketRow> CaptureAsync(
+        string iface, string tempFile, [EnumeratorCancellation] CancellationToken ct = default)
+    {
+        throw new NotSupportedException("Live capture requires tshark (Wireshark) and is not available on this platform.");
+        yield break;
+    }
 
     public Task<List<Packet>> ReadFileAsync(string pcapPath, int maxPackets = 0, CancellationToken ct = default) =>
         Task.Run(() =>

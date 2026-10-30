@@ -8,12 +8,12 @@ static class Guide
 		"Filters are just rules: 'tcp', 'http', 'ip.addr == 10.0.0.1', 'tcp.port == 443'.";
 
 	public const string Filter =
-		"Type a rule, then press Apply. Packets that don't match are hidden (not deleted).\n" +
-		"Green message = rule understood. Red = typo. Or tap one of the shortcuts below.";
+		"Point at the box and pull the trigger for a keyboard, then press Apply. Packets that don't match are hidden (not deleted).\n" +
+		"The box turns green when the rule works and red when it has a typo. Or tap a shortcut below.";
 
 	public const string PacketList =
 		"PACKET LIST - one row per packet that crossed the wire. Click a row to inspect it.\n" +
-		"Colours: purple = TCP, blue = UDP, green = HTTP, grey = connection open/close, red = a problem or reset.";
+		"Colours: lavender = TCP, blue = UDP, green = HTTP, grey = connection open/close, dark red = reset, black = a problem.";
 
 	public const string Details =
 		"PACKET DETAILS - the selected packet, unwrapped layer by layer (outer layer first).\n" +

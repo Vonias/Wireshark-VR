@@ -21,7 +21,48 @@ public class MainActivity : Activity, ISurfaceHolderCallback2
 	protected override void OnCreate(Bundle savedInstanceState)
 	{
 		base.OnCreate(savedInstanceState);
+		_instance = this;
 		Run();
+	}
+
+#if DEBUG
+	protected override void OnResume()
+	{
+		base.OnResume();
+		if (Intent?.GetBooleanExtra("vpnTest", false) == true) RequestVpn();
+	}
+#endif
+
+	const int VpnConsentRequest = 7001;
+
+	static MainActivity? _instance;
+	static volatile bool _vpnDenied;
+
+	public static void RequestVpnFromAnyThread()
+	{
+		_instance?.RunOnUiThread(() => _instance?.RequestVpn());
+	}
+
+	public static bool TakeVpnDenied()
+	{
+		bool denied = _vpnDenied;
+		_vpnDenied = false;
+		return denied;
+	}
+
+	void RequestVpn()
+	{
+		Intent? consent = Android.Net.VpnService.Prepare(this);
+		if (consent != null) StartActivityForResult(consent, VpnConsentRequest);
+		else StartService(new Intent(this, typeof(VpnCaptureService)));
+	}
+
+	protected override void OnActivityResult(int requestCode, [GeneratedEnum] Result resultCode, Intent? data)
+	{
+		base.OnActivityResult(requestCode, resultCode, data);
+		if (requestCode != VpnConsentRequest) return;
+		if (resultCode == Result.Ok) StartService(new Intent(this, typeof(VpnCaptureService)));
+		else _vpnDenied = true;
 	}
 
 	protected override void OnDestroy()

@@ -13,6 +13,12 @@ static partial class PlatformPaths
 
 	public static partial string[] MonospaceFonts() => new[] { @"C:\Windows\Fonts\consola.ttf" };
 
+	public static partial bool SupportsVpnCapture() => false;
+	public static partial void RequestVpnCapture() { }
+	public static partial void StopVpnCapture() { }
+	public static partial WiresharkVR.Core.Vpn.LiveCapture? ActiveVpnCapture() => null;
+	public static partial bool TakeVpnDenied() => false;
+
 	/// <summary>Walks up from the executable until it finds samples/loopback-http.pcapng (works from bin/ folders).</summary>
 	static string? SamplesFolder()
 	{

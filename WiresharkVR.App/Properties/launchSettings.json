@@ -1,11 +1,11 @@
 {
   "profiles": {
-    "Headset (Quest Link)": {
-      "commandName": "Project"
-    },
-    "Desktop simulator": {
+    "Desktop simulator (no headset needed)": {
       "commandName": "Project",
       "commandLineArgs": "--sim"
+    },
+    "Headset via Quest Link": {
+      "commandName": "Project"
     }
   }
 }

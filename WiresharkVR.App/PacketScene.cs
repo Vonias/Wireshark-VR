@@ -117,40 +117,40 @@ class PacketScene
 
 	void ControlWindow()
 	{
-		UI.WindowBegin("Conversation", ref _controlPose, new Vec2(30, 0) * U.cm, UIWin.Normal);
+		ControllerRays.BeginWindow("Conversation", ref _controlPose, new Vec2(30, 0) * U.cm, UIWin.Normal);
 		UI.Label($"{_conv.Key}   {_leftEndpoint}  <->  {_rightEndpoint}");
 		UI.Label($"Showing {Math.Min(_shown, _packets.Count)} of {_packets.Count} packets");
 		UI.HSeparator();
 
-		if (UI.Button("Next") && _shown < _packets.Count)
+		if (PointerUI.Button("Next") && _shown < _packets.Count)
 		{
 			_shown++;
 			_revealTime = Time.Totalf;
 			_selected   = _shown - 1;
 		}
 		UI.SameLine();
-		if (UI.Button("Back") && _shown > 1)
+		if (PointerUI.Button("Back") && _shown > 1)
 		{
 			_shown--;
 			_selected = Math.Min(_selected, _shown - 1);
 		}
 		UI.SameLine();
-		if (UI.Button("Show all")) { _shown = _packets.Count; }
+		if (PointerUI.Button("Show all")) { _shown = _packets.Count; }
 		UI.SameLine();
-		if (UI.Button("Restart")) { _shown = 1; _selected = -1; _revealTime = Time.Totalf; }
+		if (PointerUI.Button("Restart")) { _shown = 1; _selected = -1; _revealTime = Time.Totalf; }
 
 		UI.HSeparator();
 		UI.Label("Pinch a packet box in the diagram,\nor press Next to walk through it.");
-		UI.WindowEnd();
+		ControllerRays.EndWindow();
 	}
 
 	void InspectorWindow()
 	{
-		UI.WindowBegin("Packet inspector", ref _inspectPose, new Vec2(40, 0) * U.cm, UIWin.Normal);
+		ControllerRays.BeginWindow("Packet inspector", ref _inspectPose, new Vec2(40, 0) * U.cm, UIWin.Normal);
 		if (_selected < 0 || _selected >= _packets.Count)
 		{
 			UI.Label("No packet selected yet.");
-			UI.WindowEnd();
+			ControllerRays.EndWindow();
 			return;
 		}
 
@@ -166,7 +166,7 @@ class PacketScene
 			if (i > 0) UI.SameLine();
 			bool on = i == _layerIndex;
 			UI.PushTint(on ? new Color(0.5f, 0.9f, 0.5f) : Color.White);
-			if (UI.Button(p.Layers[i].Name)) _layerIndex = i;
+			if (PointerUI.Button(p.Layers[i].Name)) _layerIndex = i;
 			UI.PopTint();
 		}
 		UI.HSeparator();
@@ -180,7 +180,7 @@ class PacketScene
 		}
 		if (layer.Fields.Count > MaxFields)
 			UI.Label($"... and {layer.Fields.Count - MaxFields} more fields");
-		UI.WindowEnd();
+		ControllerRays.EndWindow();
 	}
 
 	// ---- helpers --------------------------------------------------------

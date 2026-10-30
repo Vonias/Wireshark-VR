@@ -17,4 +17,18 @@ static partial class PlatformPaths
 
 	/// <summary>Candidate fixed-width fonts, best first, for the hex dump.</summary>
 	public static partial string[] MonospaceFonts();
+
+	/// <summary>True where the device can capture its own traffic through a VPN tunnel.</summary>
+	public static partial bool SupportsVpnCapture();
+
+	/// <summary>Asks the OS for VPN permission, then starts capturing once it is granted.</summary>
+	public static partial void RequestVpnCapture();
+
+	public static partial void StopVpnCapture();
+
+	/// <summary>The running VPN capture, or null.</summary>
+	public static partial WiresharkVR.Core.Vpn.LiveCapture? ActiveVpnCapture();
+
+	/// <summary>True once after the user declines the VPN permission prompt.</summary>
+	public static partial bool TakeVpnDenied();
 }

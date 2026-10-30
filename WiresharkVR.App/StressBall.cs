@@ -15,7 +15,7 @@ class StressBall
 	const float ReleaseAt    = 0.25f;  // squeeze level below which the ball counts as let go
 
 	// Where the ball starts; after that it lives wherever the user last put it.
-	Pose _pose = new Pose(0, -0.50f, -0.50f, Quat.Identity);
+	Pose _pose = new Pose(0.50f, -0.50f, -0.45f, Quat.Identity);
 
 	readonly Mesh     _mesh = Mesh.GenerateSphere(1f, 24);
 	readonly Material _mat  = Material.Default;

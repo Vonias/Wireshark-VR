@@ -14,6 +14,15 @@ public interface ICaptureEngine
     Task<string> StatisticAsync(string pcapPath, string statistic, string? displayFilter = null, CancellationToken ct = default);
     Task<string> FollowStreamAsync(string pcapPath, string protocol, int streamIndex, CancellationToken ct = default);
     Task<List<Packet>> ReadFileAsync(string pcapPath, int maxPackets = 0, CancellationToken ct = default);
+
+    /// <summary>Returns display strings like "1. Wi-Fi" for each available capture interface.</summary>
+    Task<List<string>> ListInterfacesAsync(CancellationToken ct = default);
+
+    /// <summary>
+    /// Streams live packets from <paramref name="iface"/> (the number prefix from <see cref="ListInterfacesAsync"/>).
+    /// Simultaneously writes a pcapng file to <paramref name="tempFile"/> so details can be fetched after stopping.
+    /// </summary>
+    IAsyncEnumerable<PacketRow> CaptureAsync(string iface, string tempFile, CancellationToken ct = default);
 }
 
 public static class CaptureEngine

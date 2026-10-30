@@ -67,16 +67,16 @@ public sealed class CaptureDissector
         double first = raws.Count > 0 ? raws[0].Time : 0;
         foreach (var raw in raws)
         {
-            var dp = Dissect(raw);
-            dp.RelativeTime = raw.Time - first;
-            result.Add(dp);
+            result.Add(Dissect(raw, raw.Time - first));
+
         }
         return result;
     }
 
-    DissectedPacket Dissect(RawPacket raw)
+    /// <summary>Dissects the next packet of a capture; packets must arrive in capture order.</summary>
+    public DissectedPacket Dissect(RawPacket raw, double relativeTime)
     {
-        var dp = new DissectedPacket { Raw = raw };
+        var dp = new DissectedPacket { Raw = raw, RelativeTime = relativeTime };
         try
         {
             switch (raw.LinkType)
